@@ -1,0 +1,155 @@
+---
+title: "Analyzing Real-time EHR Data with Linear and Time Series Regression"
+author: "Gregory Maly"
+date: "February 26, 2018"
+output: 
+    html_document:
+        toc: true
+        toc_float: true
+---
+
+*This paper is a working draft, and may include incomplete thoughts or spelling errors. If the paper was shared with you, it was done so in hopes of getting feedback from those with expertise in fields such as hematology, pharmaceuticals, or statistics. [Click here](https://docs.google.com/spreadsheets/d/1eMz98RVYkRLEgwIygZfmTSckwZequpTkD2qos1c87zs/edit?usp=sharing) to access the full health data file set associated with this paper. Please direct inquiries to [Greg Maly](mailto:gamaly@gmail.com).*
+
+#Introduction
+
+Increased collection and storage of patient medical records in combination with advances in computer processing power offer new methods of analyzing patient health records in near real-time. A 2016 journal article published in the US National Library of Medicine at the National Institute of Health examines the possibility of using lagged linear correlation, lagged regression, granger causality, and vector autogression to uncover associations in electronic health record (EHR) data. A second 2016 paper written in the same journal examines adaptive forecasting models from irregularly sampled multivariate clinical data. Both papers examine the same concept, which is to use multivariate statistical analysis to understand hidden correlated factors in electronic health record data. These methods may offer insights that augment the expertise of clinical doctors. 
+
+The question at hand is how to implement these methods for real-time analysis in single patients. This living research paper will focus on one individual who has agreed to open their real-time EHR data for analysis. 
+
+The paper is written as an R Markdown file running in R 3.4.3. All R syntax is included throughout the document.
+
+#The Case: Low Red Blood Cell, White Blood Cell, and Platelet Counts
+
+This research document is an evolving attempt to analyze real-time EHR data for a current patient. The patient was admitted to the hospital and held for four weeks after low white blood cell, red blood cell, and platelet levels were discovered. As of the writing of this document, the cause of his poor blood health is still unknown. 
+
+The current theory is that medications caused bone marrow to stop producing healthy blood. This document will seek to analyze correlations between his intake of medications and white, red and platelet counts.
+
+##Background: Blood Health Over Time
+The following graph shows his daily blood cell counts starting on January 22. As of Febuary 24, blood was drawn and tested three days a week.
+
+```{r}
+library(ggplot2)
+load(file="allHealthData.Rdata")
+ggplot(data=subset(allHealthData, Date > as.Date("2018-1-22")),
+ aes(Date, group=1)) + 
+  geom_line(aes(y = `WBC`, color = "WBC (K/uL)" )) +
+  geom_line(aes(y = `Hgb`, color="Hgb (g/dL)")) +
+  geom_line(aes(y=`Platelets`, color="Platelets"))
+```
+
+##White Blood Cell Count Summary Stats
+
+```{r}
+summary(allHealthData$`WBC`)
+```
+
+##Red Blood Cell Count Summary Statistics
+```{r}
+summary(allHealthData$`Hgb`)
+```
+##Platelet Levels summary statistics
+```{r}
+summary(allHealthData$`Platelets`)
+```
+
+#Hypothesis: Medication intake is correlated with blood health
+
+The current hypothesis is that medications caused a drop in blood cell counts. This includes two possibilities.
+
+1. Medication negatively interacted with the blood system, causing damage to bone marrow function.
+2. Medication caused the body to forget how to develop healthy blood cells.
+
+If medications are believed to cause poor blood health, then we should be able to see a correlation between the intake of individual meducations and blood health. However, given limited available data, there are multiple scenarios that may not be visible.
+
+##Medication Overview
+
+1. **Acetazolamide:** The patient took Acetazolamide for approximtely six weeks in October and November 2017. Blood samples were found to be normal on December 4. Therefore there is little reason to believe a correlation between blood health and Azetazolamide.
+2. **Methazolamide:** The patient took Methazolamide from December 6 2017 - January 4 2018. Blood samples were found to be normal in the days prior to taking the drug, and unhealthy in the weeks after finishing the course of medication. There is reason to believe Methazolamide may be correlated with poor blood health, but there may be insufficient data to see a correlation in a single patient. 
+3. **Cefadroxil** The patient took Cefadroxil in the days prior to being admitted to the hospital. Blood was found to be normal the month before taking Cefadroxil, but unhealthy shortly after first taking it. The patient stopped taking the medication once admitted to the hospital. There is reson to believe Cefadroxil intake is correlated with unhealthy blood levels, but there may be insufficent data to see a correlation in a single patient.
+4. **Prednisone:** Prednisone can lead to an incease in white and red blood cell counts during use, but has been shown to reduce the number of health blood cells as a patient reduces daily levels of intake. If this hypothesis were to be true, we would expect to see a reduction in prednisone levels to correlate with a reduction in healthy blood cells. Four months of prednisone use were recorded, while only four weeks of blood tests have been recorded.
+
+This section will use standard multiple regression methods to test medication levels against daily blood tests of white blood cells, red blood cells, and platelet levels. Because this data is temporal, subsequent sections will use time series tests to look for patterns over time.
+
+##Test 1: WBC as Dependent Variable. All medications as Indepedent Variables###
+```{r MultiVariate WBC Test}
+WbcMulti <- lm(WBC ~ Triamterene + Bisoprolol + aspirin + Prednisone + Fosamax + `Vitamin D-3` + Acetazolamide + Methazolamide + Cefadroxil + Sulfamethoxazole, data = allHealthData)
+summary(WbcMulti)
+
+```
+##Test 2: Hgb as Dependent Variable. All medications as Indepedent Variables###
+```{r MultiVariate HGB Test}
+WbcMulti <- lm(Hgb ~ Triamterene + Bisoprolol + aspirin + Prednisone + Fosamax + `Vitamin D-3` + Acetazolamide + Methazolamide + Cefadroxil + Sulfamethoxazole, data = allHealthData)
+summary(WbcMulti)
+
+```
+
+##Test 3: Platelets as Dependent Variable. All medications as Indepedent Variables###
+```{r MultiVariate PLatelet Test}
+WbcMulti <- lm(Platelets ~ Triamterene + Bisoprolol + aspirin + Prednisone + Fosamax + `Vitamin D-3` + Acetazolamide + Methazolamide + Cefadroxil + Sulfamethoxazole, data = allHealthData)
+summary(WbcMulti)
+```
+
+#Results
+
+```{r warning=FALSE}
+library(ggplot2)
+ggplot(allHealthData, aes(Date, group=1)) + 
+  geom_line(aes(y=Prednisone, color = "Prednisone")) +
+  geom_line(aes(y =WBC, color = "WBC" )) +
+  geom_line(aes(y =Hgb, color="Hgb")) +
+  geom_line(aes(y=Platelets, color="Platelets")) +
+  ylim(0, 75) + 
+  ylab("Medication and Blood Levels")
+```
+ 
+###Test 2: Scatterplot of Predisone intake vs Hemoglobin###
+One+One=2
+
+```{r PredisonePlot}
+plot(allHealthData$Hgb~allHealthData$Prednisone)
+PredisoneIV <- lm(Hgb ~ Prednisone, data=allHealthData)
+summary(PredisoneIV)
+```
+
+###Test 2: Scatterplot of Prednisone intake vs White Blood Cell Count###
+
+```{r PredisonePlot2}
+plot(allHealthData$WBC ~allHealthData$Prednisone)
+PredisoneIV_WBC <- lm(WBC ~ Prednisone, data=allHealthData)
+summary(PredisoneIV_WBC)
+```
+This analysis will use a time series regression model to identify possible correlations between medication intake and blood levels.
+
+```{r plotTSRedBloodcells}
+library(forecast)
+library(lmtest)
+#Prepared Differenced Time Series Data
+dprednisone <- diff(allHealthData$Prednisone)
+dWBC <- diff(allHealthData$WBC)
+dHgb <- diff(allHealthData$Hgb)
+dPlatelets <- diff(allHealthData$Platelets)
+grangertest(dprednisone ~ dWBC, order=4)
+```
+
+#Implications for EHR Databases
+*To be written: This section will discuss electronic health record systems such as DHIS 2, and the possibility of including this type of analysis for all individual health patient records.*
+
+
+
+#Annex
+##Full Data Table
+```{r Annex}
+library(knitr)
+kable(allHealthData)
+```
+
+#Bibliography
+
+[Comparing lagged linear correlation, lagged regression, Granger causality, and vector autoregression for uncovering associations in EHR data](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5333294/)
+
+[Learning Adaptive Forecasting Models from Irregularly Sampled Multivariate Clinical Data](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4980099/)
+
+#About
+This paper is produced for the explicit purpose of peer reviewed feedback. It is also written with the understanding that EHR data on individual patients is rare, particularly in cases that involve active investigations to the cause of poor blood health. Data from this case will be made available to interested hematology departments.
+ 
+The author, Greg Maly, is Principle Data Scientist at DAI's [office of Global Health](https://www.dai.com/our-work/solutions/health).
