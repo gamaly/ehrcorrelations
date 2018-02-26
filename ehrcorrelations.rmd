@@ -2,10 +2,7 @@
 title: "Analyzing Real-time EHR Data with Linear and Time Series Regression"
 author: "Gregory Maly"
 date: "February 26, 2018"
-output: 
-    html_document:
-        toc: true
-        toc_float: true
+output: github_document
 ---
 
 *This paper is a working draft, and may include incomplete thoughts or spelling errors. If the paper was shared with you, it was done so in hopes of getting feedback from those with expertise in fields such as hematology, pharmaceuticals, or statistics. [Click here](https://docs.google.com/spreadsheets/d/1eMz98RVYkRLEgwIygZfmTSckwZequpTkD2qos1c87zs/edit?usp=sharing) to access the full health data file set associated with this paper. All code is available on github Please direct inquiries to [Greg Maly](mailto:gamaly@gmail.com).*
